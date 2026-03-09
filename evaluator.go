@@ -324,6 +324,16 @@ func (e *Evaluator) execFilterBlock(n *FilterBlockNode) error {
 	}
 
 	result := buf.String()
+
+	if n.Name == "eval" || n.Name == "evaltt" {
+		evaluated, err := e.filterEval(result)
+		if err != nil {
+			return err
+		}
+		_, err = io.WriteString(e.output, evaluated)
+		return err
+	}
+
 	args, err := e.evalArgExprs(n.Args)
 	if err != nil {
 		return err
@@ -846,6 +856,11 @@ func (e *Evaluator) evalFilter(f *FilterExpr) (interface{}, error) {
 	if err != nil {
 		return nil, err
 	}
+
+	if f.Name == "eval" || f.Name == "evaltt" {
+		return e.filterEval(toString(input))
+	}
+
 	args, err := e.evalArgExprs(f.Args)
 	if err != nil {
 		return nil, err
@@ -856,6 +871,23 @@ func (e *Evaluator) evalFilter(f *FilterExpr) (interface{}, error) {
 		return nil, newEvalError(fmt.Sprintf("unknown filter: %s", f.Name))
 	}
 	return fn(toString(input), args), nil
+}
+
+// filterEval parses and evaluates input as template text using the current context.
+func (e *Evaluator) filterEval(input string) (string, error) {
+	parsed, err := Parse(input, "", "")
+	if err != nil {
+		return "", err
+	}
+	var buf strings.Builder
+	child := NewEvaluator(e.stash, &buf, e.loader)
+	child.filters = e.filters
+	child.blocks = e.blocks
+	child.macros = e.macros
+	if err := child.Execute(parsed); err != nil {
+		return "", err
+	}
+	return buf.String(), nil
 }
 
 func (e *Evaluator) evalRange(r *RangeExpr) (interface{}, error) {

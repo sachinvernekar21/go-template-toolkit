@@ -715,3 +715,77 @@ func TestEvalDollarVarMissing(t *testing.T) {
 		t.Errorf("expected empty for missing key, got %q", result)
 	}
 }
+
+func TestEvalFilterEvalInline(t *testing.T) {
+	vars := map[string]interface{}{
+		"fragment": "Hello [% name %]!",
+		"name":     "World",
+	}
+	result := evalTemplate(t, "[% fragment | eval %]", vars)
+	if result != "Hello World!" {
+		t.Errorf("expected 'Hello World!', got %q", result)
+	}
+}
+
+func TestEvalFilterEvalBlock(t *testing.T) {
+	vars := map[string]interface{}{
+		"name": "Alice",
+	}
+	tmpl := `[% FILTER eval %]Greetings, [% name %]![% END %]`
+	result := evalTemplate(t, tmpl, vars)
+	if result != "Greetings, Alice!" {
+		t.Errorf("expected 'Greetings, Alice!', got %q", result)
+	}
+}
+
+func TestEvalFilterEvalttAlias(t *testing.T) {
+	vars := map[string]interface{}{
+		"fragment": "[% 1 + 2 %]",
+	}
+	result := evalTemplate(t, "[% fragment | evaltt %]", vars)
+	if result != "3" {
+		t.Errorf("expected '3', got %q", result)
+	}
+}
+
+func TestEvalFilterEvalVariableContext(t *testing.T) {
+	vars := map[string]interface{}{
+		"tmpl": "[% greeting %], [% target %]!",
+	}
+	result := evalTemplate(t, `[% greeting = "Hi" %][% target = "Bob" %][% tmpl | eval %]`, vars)
+	if result != "Hi, Bob!" {
+		t.Errorf("expected 'Hi, Bob!', got %q", result)
+	}
+}
+
+func TestEvalFilterEvalNested(t *testing.T) {
+	vars := map[string]interface{}{
+		"inner": "[% 2 + 3 %]",
+		"outer": "result=[% inner | eval %]",
+	}
+	result := evalTemplate(t, "[% outer | eval %]", vars)
+	if result != "result=5" {
+		t.Errorf("expected 'result=5', got %q", result)
+	}
+}
+
+func TestEvalFilterEvalUndefinedVars(t *testing.T) {
+	vars := map[string]interface{}{
+		"fragment": "x=[% undefined_var %]y",
+	}
+	result := evalTemplate(t, "[% fragment | eval %]", vars)
+	if result != "x=y" {
+		t.Errorf("expected 'x=y', got %q", result)
+	}
+}
+
+func TestEvalFilterEvalttBlock(t *testing.T) {
+	vars := map[string]interface{}{
+		"x": "42",
+	}
+	tmpl := `[% FILTER evaltt %]value=[% x %][% END %]`
+	result := evalTemplate(t, tmpl, vars)
+	if result != "value=42" {
+		t.Errorf("expected 'value=42', got %q", result)
+	}
+}
