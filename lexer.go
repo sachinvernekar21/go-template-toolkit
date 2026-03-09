@@ -361,6 +361,11 @@ func (l *Lexer) lexToken() (Token, error) {
 		l.col++
 		return Token{Type: TokenConcat, Value: "_", Line: startLine, Col: startCol}, nil
 
+	case ch == '$':
+		l.pos++
+		l.col++
+		return Token{Type: TokenDollar, Value: "$", Line: startLine, Col: startCol}, nil
+
 	case isIdentStart(rune(ch)):
 		return l.lexIdent()
 

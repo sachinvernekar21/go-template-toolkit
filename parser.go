@@ -956,13 +956,43 @@ func (p *Parser) parsePrimary() (Expr, error) {
 
 func (p *Parser) parseIdentExpr() (Expr, error) {
 	var segments []IdentSegment
-	for {
+
+	// First segment: plain ident
+	tok := p.peek()
+	if tok.Type != TokenIdent {
+		return nil, fmt.Errorf("line %d, col %d: expected identifier", tok.Line, tok.Col)
+	}
+	p.advance()
+	seg := IdentSegment{Name: tok.Value}
+	if p.at(TokenLParen) {
+		p.advance()
+		args, err := p.parseArgList()
+		if err != nil {
+			return nil, err
+		}
+		if _, err := p.expect(TokenRParen); err != nil {
+			return nil, err
+		}
+		seg.Args = args
+	}
+	segments = append(segments, seg)
+
+	// Subsequent segments after dots, supporting $var for dynamic keys
+	for p.at(TokenDot) {
+		p.advance() // consume dot
+
+		dynamic := false
+		if p.at(TokenDollar) {
+			dynamic = true
+			p.advance() // consume $
+		}
+
 		tok := p.peek()
-		if tok.Type != TokenIdent {
-			break
+		if tok.Type != TokenIdent && !isKeywordToken(tok.Type) {
+			return nil, fmt.Errorf("line %d, col %d: expected identifier after '.'", tok.Line, tok.Col)
 		}
 		p.advance()
-		seg := IdentSegment{Name: tok.Value}
+		seg := IdentSegment{Name: tok.Value, Dynamic: dynamic}
 
 		if p.at(TokenLParen) {
 			p.advance()
@@ -977,10 +1007,6 @@ func (p *Parser) parseIdentExpr() (Expr, error) {
 		}
 
 		segments = append(segments, seg)
-		if !p.at(TokenDot) {
-			break
-		}
-		p.advance() // consume dot
 	}
 
 	expr := Expr(&IdentExpr{Segments: segments})
@@ -1103,4 +1129,24 @@ func (p *Parser) skipSemicolons() {
 	for p.at(TokenSemicolon) {
 		p.advance()
 	}
+}
+
+// isKeywordToken returns true for directive/operator keyword tokens that can
+// also appear as field names after a dot (e.g. loop.last, loop.size, item.default).
+func isKeywordToken(t TokenType) bool {
+	switch t {
+	case TokenGET, TokenSET, TokenDEFAULT, TokenCALL,
+		TokenIF, TokenELSIF, TokenELSE, TokenUNLESS, TokenEND,
+		TokenFOREACH, TokenFOR, TokenIN, TokenWHILE,
+		TokenSWITCH, TokenCASE,
+		TokenINCLUDE, TokenPROCESS, TokenINSERT,
+		TokenBLOCK, TokenFILTER, TokenWRAPPER, TokenMACRO,
+		TokenTRY, TokenCATCH, TokenTHROW, TokenFINAL,
+		TokenNEXT, TokenLAST, TokenRETURN, TokenSTOP, TokenCLEAR,
+		TokenMETA, TokenTAGS, TokenDEBUG,
+		TokenAND_WORD, TokenOR_WORD, TokenNOT_WORD,
+		TokenMOD_WORD, TokenDIV_WORD:
+		return true
+	}
+	return false
 }

@@ -41,6 +41,7 @@ const (
 	TokenFatArrow // =>
 	TokenRange    // ..
 	TokenPipe     // |
+	TokenDollar   // $
 
 	// Punctuation
 	TokenLParen
@@ -128,6 +129,7 @@ var tokenNames = map[TokenType]string{
 	TokenFatArrow:  "=>",
 	TokenRange:     "..",
 	TokenPipe:      "|",
+	TokenDollar:    "$",
 	TokenLParen:    "(",
 	TokenRParen:    ")",
 	TokenLBracket:  "[",
@@ -222,6 +224,42 @@ var keywords = map[string]TokenType{
 	"NOT":     TokenNOT_WORD,
 	"MOD":     TokenMOD_WORD,
 	"DIV":     TokenDIV_WORD,
+
+	// Lowercase directive keywords
+	"get":     TokenGET,
+	"set":     TokenSET,
+	"default": TokenDEFAULT,
+	"call":    TokenCALL,
+	"if":      TokenIF,
+	"elsif":   TokenELSIF,
+	"else":    TokenELSE,
+	"unless":  TokenUNLESS,
+	"end":     TokenEND,
+	"foreach": TokenFOREACH,
+	"for":     TokenFOR,
+	"in":      TokenIN,
+	"while":   TokenWHILE,
+	"switch":  TokenSWITCH,
+	"case":    TokenCASE,
+	"include": TokenINCLUDE,
+	"process": TokenPROCESS,
+	"insert":  TokenINSERT,
+	"block":   TokenBLOCK,
+	"filter":  TokenFILTER,
+	"wrapper": TokenWRAPPER,
+	"macro":   TokenMACRO,
+	"try":     TokenTRY,
+	"catch":   TokenCATCH,
+	"throw":   TokenTHROW,
+	"final":   TokenFINAL,
+	"next":    TokenNEXT,
+	"last":    TokenLAST,
+	"return":  TokenRETURN,
+	"stop":    TokenSTOP,
+	"clear":   TokenCLEAR,
+	"meta":    TokenMETA,
+	"tags":    TokenTAGS,
+	"debug":   TokenDEBUG,
 }
 
 type Token struct {

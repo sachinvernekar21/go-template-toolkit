@@ -189,8 +189,9 @@ type IdentExpr struct {
 }
 
 type IdentSegment struct {
-	Name string
-	Args []Expr
+	Name    string
+	Args    []Expr
+	Dynamic bool // true when prefixed with $ — resolve Name as a variable to get the actual key
 }
 
 func (e *IdentExpr) nodeType() string { return "Ident" }

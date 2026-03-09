@@ -84,8 +84,17 @@ func (s *Stash) Resolve(segments []IdentSegment, evalArgs func([]Expr) ([]interf
 			}
 		}
 
+		key := seg.Name
+		if seg.Dynamic {
+			// $var — resolve the variable name to get the actual key
+			dynVal, _ := s.Get(seg.Name)
+			if dynVal != nil {
+				key = toString(dynVal)
+			}
+		}
+
 		var err error
-		val, err = dotAccess(val, seg.Name, segArgs)
+		val, err = dotAccess(val, key, segArgs)
 		if err != nil {
 			return nil, err
 		}
@@ -100,23 +109,27 @@ func dotAccess(val interface{}, key string, args []interface{}) (interface{}, er
 		return nil, nil
 	}
 
-	// Try virtual methods first
+	rv := reflect.ValueOf(val)
+
+	// For maps, check the key first before vmethods so that user data
+	// takes precedence over built-in methods like "size", "keys", etc.
+	if rv.Kind() == reflect.Map && rv.Type().Key().Kind() == reflect.String {
+		result := rv.MapIndex(reflect.ValueOf(key))
+		if result.IsValid() {
+			return result.Interface(), nil
+		}
+		// Key not found — fall through to vmethods (size, keys, etc.)
+	}
+
+	// Try virtual methods
 	if result, handled := tryVMethod(val, key, args); handled {
 		return result, nil
 	}
 
-	rv := reflect.ValueOf(val)
-
 	switch rv.Kind() {
 	case reflect.Map:
-		mapKey := reflect.ValueOf(key)
-		if rv.Type().Key().Kind() == reflect.String {
-			result := rv.MapIndex(mapKey)
-			if result.IsValid() {
-				return result.Interface(), nil
-			}
-			return nil, nil
-		}
+		// Already checked above; key was not found
+		return nil, nil
 
 	case reflect.Struct:
 		return structAccess(rv, key, args)

@@ -588,3 +588,130 @@ func TestEvalStructMethod(t *testing.T) {
 		t.Errorf("expected 'Hello, Alice', got %q", result)
 	}
 }
+
+// --- Lowercase directive tests ---
+
+func TestEvalLowercaseForeach(t *testing.T) {
+	tmpl := "[% foreach item in list %][% item %] [% end %]"
+	result := evalTemplate(t, tmpl, map[string]interface{}{
+		"list": []interface{}{"a", "b", "c"},
+	})
+	if result != "a b c " {
+		t.Errorf("expected 'a b c ', got %q", result)
+	}
+}
+
+func TestEvalLowercaseIfElse(t *testing.T) {
+	tmpl := "[% if show %]yes[% else %]no[% end %]"
+	result := evalTemplate(t, tmpl, map[string]interface{}{"show": true})
+	if result != "yes" {
+		t.Errorf("expected 'yes', got %q", result)
+	}
+	result = evalTemplate(t, tmpl, map[string]interface{}{"show": false})
+	if result != "no" {
+		t.Errorf("expected 'no', got %q", result)
+	}
+}
+
+func TestEvalLowercaseSet(t *testing.T) {
+	result := evalTemplate(t, "[% set x = 'hello' %][% x %]", nil)
+	if result != "hello" {
+		t.Errorf("expected 'hello', got %q", result)
+	}
+}
+
+func TestEvalLowercaseMixed(t *testing.T) {
+	tmpl := "[% foreach item in list %][% if item == 'b' %]FOUND[% end %][% end %]"
+	result := evalTemplate(t, tmpl, map[string]interface{}{
+		"list": []interface{}{"a", "b", "c"},
+	})
+	if result != "FOUND" {
+		t.Errorf("expected 'FOUND', got %q", result)
+	}
+}
+
+func TestEvalLowercaseUnless(t *testing.T) {
+	result := evalTemplate(t, "[% unless hidden %]visible[% end %]", map[string]interface{}{"hidden": false})
+	if result != "visible" {
+		t.Errorf("expected 'visible', got %q", result)
+	}
+}
+
+func TestEvalLowercaseBlock(t *testing.T) {
+	tmpl := "[% block greet %]Hello [% name %][% end %][% include greet name='World' %]"
+	engine := New()
+	result, err := engine.ProcessString(tmpl, nil)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if result != "Hello World" {
+		t.Errorf("expected 'Hello World', got %q", result)
+	}
+}
+
+func TestEvalLowercaseFilter(t *testing.T) {
+	result := evalTemplate(t, "[% filter upper %]hello[% end %]", nil)
+	if result != "HELLO" {
+		t.Errorf("expected 'HELLO', got %q", result)
+	}
+}
+
+// --- Dynamic $variable key access tests ---
+
+func TestEvalDollarVarAccess(t *testing.T) {
+	vars := map[string]interface{}{
+		"data": map[string]interface{}{
+			"color": "red",
+			"size":  "large",
+		},
+		"key": "color",
+	}
+	result := evalTemplate(t, "[% data.$key %]", vars)
+	if result != "red" {
+		t.Errorf("expected 'red', got %q", result)
+	}
+}
+
+func TestEvalDollarVarInForeach(t *testing.T) {
+	vars := map[string]interface{}{
+		"attributes": map[string]interface{}{
+			"color": map[string]interface{}{"name": "Color", "value": "red"},
+			"size":  map[string]interface{}{"name": "Size", "value": "large"},
+		},
+		"items": []interface{}{"color", "size"},
+	}
+	tmpl := "[% foreach item in items %][% attributes.$item.name %]=[% attributes.$item.value %] [% end %]"
+	result := evalTemplate(t, tmpl, vars)
+	if result != "Color=red Size=large " {
+		t.Errorf("expected 'Color=red Size=large ', got %q", result)
+	}
+}
+
+func TestEvalDollarVarNested(t *testing.T) {
+	vars := map[string]interface{}{
+		"showtimesAttributes": map[string]interface{}{
+			"morning": map[string]interface{}{"name": "Morning Show", "time": "9am"},
+			"evening": map[string]interface{}{"name": "Evening Show", "time": "7pm"},
+		},
+		"items": []interface{}{"morning", "evening"},
+	}
+	tmpl := "[% foreach item in items %][% if showtimesAttributes.$item.name %][% showtimesAttributes.$item.name %] at [% showtimesAttributes.$item.time %]\n[% end %][% end %]"
+	result := evalTemplate(t, tmpl, vars)
+	if !strings.Contains(result, "Morning Show at 9am") {
+		t.Errorf("expected 'Morning Show at 9am' in result, got %q", result)
+	}
+	if !strings.Contains(result, "Evening Show at 7pm") {
+		t.Errorf("expected 'Evening Show at 7pm' in result, got %q", result)
+	}
+}
+
+func TestEvalDollarVarMissing(t *testing.T) {
+	vars := map[string]interface{}{
+		"data": map[string]interface{}{"a": 1},
+		"key":  "missing",
+	}
+	result := evalTemplate(t, "[% data.$key %]", vars)
+	if result != "" {
+		t.Errorf("expected empty for missing key, got %q", result)
+	}
+}
