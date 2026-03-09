@@ -5,7 +5,7 @@ A Go implementation of Perl's [Template Toolkit](http://template-toolkit.org/) (
 ## Installation
 
 ```bash
-go get github.com/sachinv/template-toolkit
+go get github.com/sachinvernekar21/go-template-toolkit
 ```
 
 ## Quick Start
@@ -17,7 +17,7 @@ import (
     "fmt"
     "os"
 
-    tt "github.com/sachinv/template-toolkit"
+    tt "github.com/sachinvernekar21/go-template-toolkit"
 )
 
 func main() {
